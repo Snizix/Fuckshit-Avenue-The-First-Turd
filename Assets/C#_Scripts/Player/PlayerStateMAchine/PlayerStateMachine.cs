@@ -39,6 +39,8 @@ public class PlayerStateMachine : MonoBehaviour
     PlayerBaseState _currentState;
     PlayerStateFactory _states;
 
+    float turnSmoothVelocity;
+
     public PlayerBaseState CurrentState { get { return _currentState; } set { _currentState = value; } }
     public CharacterController CharacterController { get { return _characterController; } }
     public Animator Animator { get { return _animator; } }
@@ -94,8 +96,10 @@ public class PlayerStateMachine : MonoBehaviour
     private void Update()
     { 
         HandleRotation();
-        _currentState.UpdateStates();
-        _characterController.Move(_currentMovement * Time.deltaTime);
+        _currentState.UpdateStates(); // states will modify _currentmovement before Move is called
+
+        Vector3 targetDirection = transform.right * _currentMovement.x + transform.up * _currentMovement.y + transform.forward * _currentMovement.z;
+        _characterController.Move(targetDirection * Time.deltaTime);
     }
 
     void SetupJumpVariables()
@@ -107,13 +111,19 @@ public class PlayerStateMachine : MonoBehaviour
 
     void HandleRotation()
     {
+        float turnSmoothTime = 0.01f;
+        
+        transform.eulerAngles = Vector3.up *
+            Mathf.SmoothDampAngle(transform.eulerAngles.y,
+            Camera.main.transform.rotation.eulerAngles.y, ref turnSmoothVelocity, turnSmoothTime); // Rotate the player based on camera position.
+        /*
         Vector3 positionToLookAt = new Vector3(_currentMovementInput.x, _zero, _currentMovementInput.y);
         Quaternion currentRotation = transform.rotation;
         if (_isMovementPressed)
         {
             Quaternion targetRotation = Quaternion.LookRotation(positionToLookAt);
             transform.rotation = Quaternion.Slerp(currentRotation, targetRotation, _rotationFactorPerFrame * Time.deltaTime);
-        }
+        }*/
     }
 
     void OnMovementInput(InputAction.CallbackContext context)

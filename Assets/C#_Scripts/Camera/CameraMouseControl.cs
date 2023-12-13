@@ -1,20 +1,21 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class CameraMouseControl : MonoBehaviour
 {
     GameObject target;                           // Target to follow
     float targetHeight = 0.45f;                   // Vertical offset adjustment
-    float distance = 2.0f;                       // Default Distance
+    float distance = 4.0f;                       // Default Distance
     float offsetFromWall = 0.1f;                 // Bring camera away from any colliding objects
-    float maxDistance = 20f;                     // Maximum zoom Distance
-    float minDistance = 0.2f;                    // Minimum zoom Distance
-    float xSpeed = 200.0f;                       // Orbit speed (Left/Right)
-    float ySpeed = 200.0f;                       // Orbit speed (Up/Down)
+    public float maxDistance = 20f;                     // Maximum zoom Distance
+    public float minDistance = 2f;                    // Minimum zoom Distance
+    public float xSpeed = 10.0f;                       // Orbit speed (Left/Right)
+    public float ySpeed = 10.0f;                       // Orbit speed (Up/Down)
     float yMinLimit = -40f;                      // Looking up limit
     float yMaxLimit = 60f;                       // Looking down limit
-    float zoomRate = 80f;                        // Zoom Speed
+    public float zoomRate = 1f;                        // Zoom Speed
     //float rotationDampening = 3.0f;              // Auto Rotation speed (higher = faster)
     float zoomDampening = 5.0f;                  // Auto Zoom speed (Higher = faster)
     public LayerMask collisionLayers = -1;       // What the camera will collide with
@@ -39,8 +40,20 @@ public class CameraMouseControl : MonoBehaviour
     public bool changeTransparency = true;
     public float closestDistanceToPlayer = 1.2f;
 
-    void Start()
+    public Player_Input _playerInput;
+    public Vector2 _currentMouseDelta;
+    public float _currentMouseZoom;
+
+    void Awake()
     {
+        _playerInput = new Player_Input();
+        _playerInput.CharacterControls.Look.started += OnMouseMove;
+        _playerInput.CharacterControls.Look.canceled += OnMouseMove;
+        _playerInput.CharacterControls.Look.performed += OnMouseMove;
+        _playerInput.CharacterControls.Zoom.started += OnMouseZoom;
+        _playerInput.CharacterControls.Zoom.canceled += OnMouseZoom;
+        _playerInput.CharacterControls.Zoom.performed += OnMouseZoom;
+
         Vector3 angles = transform.eulerAngles;
         xDeg = angles.x;
         yDeg = angles.y;
@@ -61,6 +74,26 @@ public class CameraMouseControl : MonoBehaviour
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
+    }
+
+    void OnMouseMove(InputAction.CallbackContext context)
+    {
+        _currentMouseDelta = context.ReadValue<Vector2>();
+    }
+
+    void OnMouseZoom(InputAction.CallbackContext context)
+    {
+        _currentMouseZoom = context.ReadValue<float>();
+    }
+
+    private void OnEnable()
+    {
+        _playerInput.CharacterControls.Enable();
+    }
+
+    private void OnDisable()
+    {
+        _playerInput.CharacterControls.Disable();
     }
 
     void Update()
@@ -108,11 +141,11 @@ public class CameraMouseControl : MonoBehaviour
             //{
             //Check to see if mouse input is allowed on the axis
             if (allowMouseInputX)
-                xDeg += Input.GetAxis("Mouse X") * xSpeed * 0.02f;
+                xDeg += _currentMouseDelta.x * xSpeed * 0.02f;
             //else
             //RotateBehindTarget();
             if (allowMouseInputY)
-                yDeg -= Input.GetAxis("Mouse Y") * ySpeed * 0.02f;
+                yDeg -= _currentMouseDelta.y * ySpeed * 0.02f;
 
             //Interrupt rotating behind if mouse wants to control rotation
             //if (!lockToRearOfTarget)
@@ -131,7 +164,7 @@ public class CameraMouseControl : MonoBehaviour
         Quaternion rotation = Quaternion.Euler(yDeg, xDeg, 0);
 
         // Calculate the desired distance
-        desiredDistance -= Input.GetAxis("Mouse ScrollWheel") * Time.deltaTime * zoomRate * Mathf.Abs(desiredDistance);
+        desiredDistance -= _currentMouseZoom * Time.deltaTime * zoomRate * Mathf.Abs(desiredDistance);
         desiredDistance = Mathf.Clamp(desiredDistance, minDistance, maxDistance);
         correctedDistance = desiredDistance;
 
